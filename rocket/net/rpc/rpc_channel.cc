@@ -13,34 +13,44 @@
 
 namespace rocket {
 
+// RpcChannel 类的构造函数，初始化成员变量 m_peer_addr
 RpcChannel::RpcChannel(NetAddr::s_ptr peer_addr) : m_peer_addr(peer_addr) {
-  INFOLOG("RpcChannel");
+  INFOLOG("RpcChannel");// 日志打印
 }
 
+// RpcChannel 类的析构函数
 RpcChannel::~RpcChannel() {
-  INFOLOG("~RpcChannel");
+  INFOLOG("~RpcChannel");// 日志打印
 }
 
-
+// RPC 回调方法
 void RpcChannel::callBack() {
-  RpcController* my_controller = dynamic_cast<RpcController*>(getController());
+  RpcController* my_controller = dynamic_cast<RpcController*>(getController());// 从基类转化为派生类
   if (my_controller->Finished()) {
-    return;
+    return;// 如果 RPC 已完成，则直接返回
   }
 
   if (m_closure) {
-    m_closure->Run();
+    m_closure->Run();// 执行回调
     if (my_controller) {
-      my_controller->SetFinished(true);
+      my_controller->SetFinished(true);// 设置 RPC 为完成状态
     }
   }
 }
 
+// 调用 RPC 方法
 void RpcChannel::CallMethod(const google::protobuf::MethodDescriptor* method,
                         google::protobuf::RpcController* controller, const google::protobuf::Message* request,
                         google::protobuf::Message* response, google::protobuf::Closure* done) {
 
-
+  // 这部分代码主要处理了：
+  // 1. 创建请求协议对象。
+  // 2. 检查输入参数是否有效。
+  // 3. 序列化请求数据。
+  // 4. 设置超时事件。
+  // 5. 使用 TcpClient 发起连接，并发送请求，然后读取响应。
+  // 6. 反序列化响应数据。
+  // 7. 根据响应结果执行相应的逻辑。
   std::shared_ptr<rocket::TinyPBProtocol> req_protocol = std::make_shared<rocket::TinyPBProtocol>();
 
   RpcController* my_controller = dynamic_cast<RpcController*>(controller);
@@ -177,18 +187,19 @@ void RpcChannel::CallMethod(const google::protobuf::MethodDescriptor* method,
 
 }
 
-
+// 初始化 RpcChannel
 void RpcChannel::Init(controller_s_ptr controller, message_s_ptr req, message_s_ptr res, closure_s_ptr done) {
   if (m_is_init) {
-    return;
+    return;// 如果已经初始化，直接返回
   }
   m_controller = controller;
   m_request = req; 
   m_response = res;
   m_closure = done;
-  m_is_init = true;
+  m_is_init = true;// 设置初始化标志为 true
 }
 
+// 下面是一系列的 getter 方法，用于获取内部的成员变量
 google::protobuf::RpcController* RpcChannel::getController() {
   return m_controller.get();
 }
@@ -210,8 +221,9 @@ TcpClient* RpcChannel::getTcpClient() {
   return m_client.get();
 }
 
-
+// 根据字符串查找对应的地址
 NetAddr::s_ptr RpcChannel::FindAddr(const std::string& str) {
+// 此部分逻辑用于查找对应的网络地址，首先查找 IP 地址，如果不是则从全局配置中查找。
   if (IPNetAddr::CheckValid(str)) {
     return std::make_shared<IPNetAddr>(str);
   } else {
