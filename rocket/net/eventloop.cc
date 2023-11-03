@@ -6,7 +6,7 @@
 #include "rocket/common/log.h"
 #include "rocket/common/util.h"
 
-
+// 定义宏，用于将事件添加到epoll实例中
 #define ADD_TO_EPOLL() \
     auto it = m_listen_fds.find(event->getFd()); \
     int op = EPOLL_CTL_ADD; \
@@ -22,7 +22,7 @@
     m_listen_fds.insert(event->getFd()); \
     DEBUGLOG("add event success, fd[%d]", event->getFd()) \
 
-
+// 定义宏，用于从epoll实例中删除事件
 #define DELETE_TO_EPOLL() \
     auto it = m_listen_fds.find(event->getFd()); \
     if (it == m_listen_fds.end()) { \
@@ -39,11 +39,11 @@
 
 namespace rocket {
 
-static thread_local EventLoop* t_current_eventloop = NULL;
-static int g_epoll_max_timeout = 10000;
-static int g_epoll_max_events = 10;
+static thread_local EventLoop* t_current_eventloop = NULL;  // 定义线程本地变量，用于存储当前线程的EventLoop实例
+static int g_epoll_max_timeout = 10000;  // 定义全局变量，表示epoll_wait的最大超时时间
+static int g_epoll_max_events = 10;  // 定义全局变量，表示epoll_wait的最大事件数量
 
-EventLoop::EventLoop() {
+EventLoop::EventLoop() {  // EventLoop的构造函数
   if (t_current_eventloop != NULL) {
     ERRORLOG("failed to create event loop, this thread has created event loop");
     exit(0);
@@ -64,7 +64,7 @@ EventLoop::EventLoop() {
   t_current_eventloop = this;
 }
 
-EventLoop::~EventLoop() {
+EventLoop::~EventLoop() {  // EventLoop的析构函数
   close(m_epoll_fd);
   if (m_wakeup_fd_event) {
     delete m_wakeup_fd_event;
@@ -77,16 +77,16 @@ EventLoop::~EventLoop() {
 }
 
 
-void EventLoop::initTimer() {
+void EventLoop::initTimer() {  // 初始化计时器
   m_timer = new Timer();
   addEpollEvent(m_timer);
 }
 
-void EventLoop::addTimerEvent(TimerEvent::s_ptr event) {
+void EventLoop::addTimerEvent(TimerEvent::s_ptr event) {  // 添加计时器事件
   m_timer->addTimerEvent(event);
 }
 
-void EventLoop::initWakeUpFdEevent() {
+void EventLoop::initWakeUpFdEevent() {  // 初始化唤醒事件
   m_wakeup_fd = eventfd(0, EFD_NONBLOCK);
   if (m_wakeup_fd < 0) {
     ERRORLOG("failed to create event loop, eventfd create error, error info[%d]", errno);
@@ -108,7 +108,7 @@ void EventLoop::initWakeUpFdEevent() {
 }
 
 
-void EventLoop::loop() {
+void EventLoop::loop() { // 主循环函数，处理事件和任务
   m_is_looping = true;
   while(!m_stop_flag) {
     ScopeMutex<Mutex> lock(m_mutex); 
@@ -175,12 +175,12 @@ void EventLoop::loop() {
 
 }
 
-void EventLoop::wakeup() {
+void EventLoop::wakeup() {  // 唤醒主循环
   INFOLOG("WAKE UP");
   m_wakeup_fd_event->wakeup();
 }
 
-void EventLoop::stop() {
+void EventLoop::stop() {  // 停止主循环
   m_stop_flag = true;
   wakeup();
 }
@@ -189,7 +189,7 @@ void EventLoop::dealWakeup() {
 
 }
 
-void EventLoop::addEpollEvent(FdEvent* event) {
+void EventLoop::addEpollEvent(FdEvent* event) {  // 向epoll实例中添加事件
   if (isInLoopThread()) {
     ADD_TO_EPOLL();
   } else {
@@ -201,7 +201,7 @@ void EventLoop::addEpollEvent(FdEvent* event) {
 
 }
 
-void EventLoop::deleteEpollEvent(FdEvent* event) {
+void EventLoop::deleteEpollEvent(FdEvent* event) { // 从epoll实例中删除事件
   if (isInLoopThread()) {
     DELETE_TO_EPOLL();
   } else {
@@ -214,7 +214,7 @@ void EventLoop::deleteEpollEvent(FdEvent* event) {
 
 }
 
-void EventLoop::addTask(std::function<void()> cb, bool is_wake_up /*=false*/) {
+void EventLoop::addTask(std::function<void()> cb, bool is_wake_up /*=false*/) { // 添加任务
   ScopeMutex<Mutex> lock(m_mutex);
   m_pending_tasks.push(cb);
   lock.unlock();
@@ -224,12 +224,12 @@ void EventLoop::addTask(std::function<void()> cb, bool is_wake_up /*=false*/) {
   }
 }
 
-bool EventLoop::isInLoopThread() {
+bool EventLoop::isInLoopThread() { // 判断当前线程是否为主循环线程
   return getThreadId() == m_thread_id;
 }
 
 
-EventLoop* EventLoop::GetCurrentEventLoop() {
+EventLoop* EventLoop::GetCurrentEventLoop() {  // 获取当前线程的EventLoop实例
   if (t_current_eventloop) {
     return t_current_eventloop;
   }
@@ -238,7 +238,7 @@ EventLoop* EventLoop::GetCurrentEventLoop() {
 }
 
 
-bool EventLoop::isLooping() {
+bool EventLoop::isLooping() {  // 判断是否正在循环
   return m_is_looping;
 }
 
